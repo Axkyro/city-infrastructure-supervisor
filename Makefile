@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -I./include
 
 
 TARGET=bin/citysup
-SRCS = src/main.c #src/parser.c
+SRCS = src/main.c src/parser.c src/utils.c
 
 all: $(TARGET)
 
