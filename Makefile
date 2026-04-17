@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -I./include
+CFLAGS = -Wall -I./include
 
 
 TARGET=bin/citysup
