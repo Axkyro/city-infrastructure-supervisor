@@ -73,6 +73,7 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
     if(argc == 1) { fprintf(stderr, "No flags!\n"); return -1; }
     cmd->operation = Invalid;
     cmd->role = Missing;
+    cmd->district_id[0] = '\0';
     size_t i = 1;  // arg counter
 
     while ( i < argc ) {
