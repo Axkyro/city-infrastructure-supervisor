@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -I./include -g
 
 
-TARGET=bin/citysup
+TARGET=bin/city_manager
 SRCS = src/main.c src/parser.c src/utils.c src/commands.c
 
 all: $(TARGET)
