@@ -8,6 +8,7 @@
 #define MAX_DESCRIPTION_LEN 200
 #include <stdint.h>
 #include <time.h>
+
 typedef enum {
     Manager,
     Inspector,
@@ -50,6 +51,5 @@ typedef struct {
     char description[MAX_DESCRIPTION_LEN];
     uint8_t severity_level;
 } Report; // 296 bytes including padding
-
 
 #endif

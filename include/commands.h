@@ -7,4 +7,6 @@ int add_district(Command *cmd);
 int exists_district(const char *str);
 
 
+int extract_permissions(const char *str);
+
 #endif

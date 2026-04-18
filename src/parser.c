@@ -70,12 +70,11 @@ const char *role_to_str(Role role) {
 
 int parse_arguments(int argc, char **argv, Command *cmd) {
     if (!cmd) return -1; // received NULL cmd
-    if(argc == 1) { fprintf(stderr, "No flags!\n"); return -1; }
     cmd->operation = Invalid;
     cmd->role = Missing;
     cmd->district_id[0] = '\0';
     size_t i = 1;  // arg counter
-
+    if(argc == 1) { fprintf(stderr, "No flags!\n"); return -1; }
     while ( i < argc ) {
         // checking for a given user
         if (strcmp("--user", argv[i]) == 0) {
