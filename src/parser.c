@@ -23,8 +23,8 @@ Operation str_to_op(const char *str) {
     else 
         return Invalid;
 
-
 }
+
 const char *op_to_str(Operation op) {
     switch(op) {
         case Add:
@@ -44,6 +44,7 @@ const char *op_to_str(Operation op) {
     }
     return "UNKNOWN ENUM VALUE";
 }
+
 Role str_to_role(const char *str) {
     
     if(!str) return Missing;
@@ -56,6 +57,7 @@ Role str_to_role(const char *str) {
 
     return Missing;
 }
+
 const char *role_to_str(Role role) {
     
     switch(role) {
@@ -64,7 +66,7 @@ const char *role_to_str(Role role) {
         case Inspector:
             return "inspector";
         case Missing:
-            return "role missing";
+            return "missing-role";
     }
     return "Unknown Role Enum";
 }
@@ -165,7 +167,7 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
                     }
                     i+=3;
                     break;
-                case Filter:
+                case Filter:/*
                     if (i+2 >= argc) {
                         fprintf(stderr, "--filter [arg1] [arg2] <--missing!\n");
                         return -1;
@@ -173,7 +175,7 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
                     strncpy(cmd->district_id, argv[i+1], MAX_DISTRICT_ID_LEN - 1);
                     cmd->district_id[MAX_DISTRICT_ID_LEN - 1] = '\0';
                     strncpy(cmd->extra.filter_condition, argv[i+2], MAX_FILTER_LEN - 1);
-                    cmd->extra.filter_condition[MAX_FILTER_LEN - 1] = '\0';
+                    cmd->extra.filter_condition[MAX_FILTER_LEN - 1] = '\0'; */
                     i+=3;
                     break;
             }

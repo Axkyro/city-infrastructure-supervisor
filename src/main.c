@@ -9,8 +9,8 @@
 #define PROGRAM_FAIL_OP 2
 
 int main(int argc, char **argv) {
-
-    
+    printf("Size: %ld", sizeof(Report));
+   /* 
     Command cmd;
     if(parse_arguments(argc, argv, &cmd) != 0) {
         fprintf(stderr, "Bad Arguments!\n");
@@ -46,4 +46,5 @@ int main(int argc, char **argv) {
             printf("Not yet implemented!");
     }
     return 0;
+    */
 }

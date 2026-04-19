@@ -11,16 +11,171 @@
 #include <string.h>
 #include <errno.h>
 
-#define MINIMUM_SEVERITY_THRESHOLD 2
-#define DIR_FLAGS 0750
-#define LOGGED_DISTRICT_FLAGS 0644
-#define REPORTS_DAT_FLAGS 0664
-#define DISTRICT_CFG_FLAGS 0640
-#define MAX_PATH_LEN MAX_DISTRICT_ID_LEN + 20
-#define MAX_LOG_LEN 300
-#define INITIAL_REPORT_ID 0
 
+int directory_exists(const char *path, struct stat *info) {
+
+    if ( stat(path, info) == -1)
+        return 0;
+    
+    return S_ISDIR(info->st_mode);
+}
+
+int file_exists(const char *path, struct stat *info) {
+    
+    if (stat(path, info) == -1)
+        return 0;
+
+    return S_ISREG(info->st_mode);
+}
+
+int symlink_exists(const char *path, struct stat *info) {
+
+    if(lstat(path, info) == -1)
+        return 0;
+
+    return S_ISLNK(info->st_mode);
+}
+
+int create_file(const char *path, int permissions) {
+
+    int fd = open(path, O_CREAT | O_WRONLY, 0); // 0 because we are asked to use chmod
+    
+    if(fd == -1) {
+        perror(path);
+        return -1;
+    }
+
+    close(fd);
+    enforce_permissions(path, permissions); // <-- uses chmod
+
+    return 0;
+}
+
+int create_directory(const char *path, int permissions) {
+    
+    if( mkdir(path, permissions) == -1) {
+        perror(path);
+        return -1;
+    }
+
+    return 0;
+}
+
+int create_symlink(const char *path, const char *link) {
+
+    if(symlink(path, link) == -1) {
+        perror(path);
+        return -1;
+    }
+
+    return 0;
+}
+
+int remove_symlink(const char *link) {
+
+    if (unlink(link) == -1) {
+        perror(link);
+        return -1;
+    }
+
+    return 0;
+}
+
+int file_empty(struct stat *info) {
+    return info->st_size == 0;
+}
+
+int extract_permissions(struct stat *info) {
+    return info->st_mode & 0x1FF; // this way we retrieve the last 9 bits
+}
+
+int enforce_permissions(const char *path, int permissions) {
+    
+    if(chmod(path, permissions) == -1) {
+        perror("chmod");
+        return -1;
+    }
+
+    return 0;
+}
+
+int check_obj_sanity(struct stat *info, int permissions) {
+    return extract_permissions(info) == permissions;
+}
+
+int check_read_perm(int permissions, Role role) {
+    // rwxrwxrwx
+    switch (role) {
+        case Manager:
+            if((permissions >> 8) & 0x1)
+                return 1;
+            break;
+        case Inspector:
+            if((permissions >> 5) & 0x1)
+                return 1;
+            break;
+        case Missing:
+            return 0;
+    }
+    return 0;
+}
+int check_write_perm(int permissions, Role role) {
+    // rwxrwxrwx
+    switch (role) {
+        case Manager:
+            if((permissions >> 7) & 0x1)
+                return 1;
+            break;
+        case Inspector:
+            if((permissions >> 4) & 0x1)
+                return 1;
+            break;
+        case Missing:
+            return 0;
+    }
+    return 0;
+}
+
+int sanitize() {
+    //
+    return 0;
+}
+void log_operation(Command *cmd, time_t timestamp) {
+    
+    char log_path[MAX_PATH_LEN];
+    build_path(cmd->district_id, "logged_district", log_path); 
+    
+    struct stat info;
+    if(!file_exists(log_path, &info))
+        return;
+
+    if(!check_write_perm(cmd->role, extract_permissions(&info))) {
+        fprintf(stderr, "Cannot write to log as: %s\n", role_to_str(cmd->role));
+        return;
+    }
+    
+    char log_message[MAX_LOG_LEN];
+    snprintf(log_message, MAX_LOG_LEN, "%ld\t%s\t%s\t%s\n",
+            timestamp, cmd->user, role_to_str(cmd->role), op_to_str(cmd->operation));
+    
+    int fd = open(log_path, O_APPEND | O_WRONLY);
+    if(fd == -1) {
+        perror(log_path);
+        return;
+    }
+    if( write(fd, log_message, strlen(log_message)) == -1)
+        perror("Error writing to logged_district");
+    
+    if(close(fd) == -1) {
+        perror(log_path);
+    }
+}
+
+/*
 void log_op(Command *cmd, time_t timestamp) {
+    if(cmd->role != Manager)
+        return;
+
     char path[MAX_PATH_LEN];
     snprintf(path, MAX_PATH_LEN, "%s/logged_district", cmd->district_id);
     int fd = open(path, O_CREAT | O_APPEND | O_WRONLY, LOGGED_DISTRICT_FLAGS);
@@ -57,7 +212,9 @@ int update_threshold(Command *cmd) {
         fprintf(stderr, "Couldn't open: [%s]\n", path);
         return 0;
     }
-    if(write(fd, &cmd->extra.new_threshold, sizeof(cmd->extra.new_threshold)) != sizeof(cmd->extra.new_threshold)){
+    char to_write[MAX_SEVERITY_DIGITS_LEN];
+    snprintf(to_write, MAX_SEVERITY_DIGITS_LEN, "%hhu\n", cmd->extra.new_threshold);
+    if(write(fd, to_write, MAX_SEVERITY_DIGITS_LEN) != MAX_SEVERITY_DIGITS_LEN){
         fprintf(stderr, "Couldn't set new_threshold!\n");
         return -1;
     }
@@ -337,4 +494,4 @@ int create_district(Command *cmd) {
 
     return 0;
 }
-
+*/
