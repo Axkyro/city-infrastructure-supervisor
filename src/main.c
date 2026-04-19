@@ -36,6 +36,12 @@ int main(int argc, char **argv) {
                 exit(PROGRAM_FAIL_OP);
             }
             break;
+        case UpdateThreshold:
+            if(update_threshold(&cmd) != 0) {
+                printf("Error --update_threshold\n");
+                exit(PROGRAM_FAIL_OP);
+            }
+            break;
         default:
             printf("Not yet implemented!");
     }

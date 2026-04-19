@@ -9,6 +9,7 @@ int extract_permissions(const char *path);
 int add(Command *cmd);
 int list(Command *cmd);
 int view(Command *cmd);
+int update_threshold(Command *cmd);
 void log_op(Command *cmd, time_t timestamp);
 int is_empty_file(const char *path);
 #endif

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <errno.h>
 
+#define MINIMUM_SEVERITY_THRESHOLD 2
 #define DIR_FLAGS 0750
 #define LOGGED_DISTRICT_FLAGS 0644
 #define REPORTS_DAT_FLAGS 0664
@@ -39,6 +40,30 @@ void log_op(Command *cmd, time_t timestamp) {
      
 }
 
+int update_threshold(Command *cmd) {
+    char path[MAX_PATH_LEN];
+    snprintf(path, MAX_PATH_LEN, "%s/district.cfg", cmd->district_id);
+    log_op(cmd, time(NULL));
+    if(extract_permissions(path) != DISTRICT_CFG_FLAGS) {
+        fprintf(stderr, "Modified [%s] permissions, refusing to continue!\n", path);
+        return -1;
+    }
+    if(cmd->role != Manager) {
+        printf("You cannot change threshold as %s\n", role_to_str(cmd->role));
+        return 0;
+    }
+    int fd = open(path, O_WRONLY);
+    if(fd == -1) {
+        fprintf(stderr, "Couldn't open: [%s]\n", path);
+        return 0;
+    }
+    if(write(fd, &cmd->extra.new_threshold, sizeof(cmd->extra.new_threshold)) != sizeof(cmd->extra.new_threshold)){
+        fprintf(stderr, "Couldn't set new_threshold!\n");
+        return -1;
+    }
+    return 0;
+
+}
 int input_report(Report *report,Command *cmd) {
     memset(report, 0x00, sizeof(Report)); // making sure we have a blank report
     
@@ -273,15 +298,20 @@ int create_district(Command *cmd) {
     
     // creating district.cfg
     strcpy(path + cat_point, "district.cfg");
-    fd = open(path, O_CREAT | O_RDONLY, 0);
+    fd = open(path, O_CREAT | O_WRONLY, 0);
     
     if(fd == -1) {
         fprintf(stderr, "Couldn't create file: %s\n", path);
         return -1;
     }
-
+    
     if(chmod(path, DISTRICT_CFG_FLAGS) != 0 ) {
         fprintf(stderr, "Couldn't change permissions on: %s\n", path);
+        return -1;
+    }
+    uint8_t severity_threshold = MINIMUM_SEVERITY_THRESHOLD;
+    if(write(fd, &severity_threshold, sizeof(severity_threshold)) != sizeof(severity_threshold)) {
+        fprintf(stderr, "Couln't set minimum severity threshold!\n");
         return -1;
     }
     close(fd);

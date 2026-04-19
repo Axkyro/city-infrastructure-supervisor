@@ -35,7 +35,7 @@ typedef struct {
 
     union { // used for additional possible fields  
         int report_id;
-        int new_threshold;
+        uint8_t new_threshold;
         char filter_condition[MAX_FILTER_LEN];
     } extra;
 } Command;

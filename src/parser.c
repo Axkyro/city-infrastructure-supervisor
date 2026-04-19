@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 
 Operation str_to_op(const char *str) {
     if(!str)
@@ -157,7 +158,7 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
                     }
                     strncpy(cmd->district_id, argv[i+1], MAX_DISTRICT_ID_LEN - 1);
                     cmd->district_id[MAX_DISTRICT_ID_LEN - 1] = '\0';
-                    cmd->extra.new_threshold = strtol(argv[i+2], NULL, 10);
+                    cmd->extra.new_threshold = (uint8_t)strtol(argv[i+2], NULL, 10);
                     if (cmd->extra.new_threshold == 0 && argv[i+2][0] != '0') {
                         fprintf(stderr, "Please use a number for report_id!\n");
                         return -1;
