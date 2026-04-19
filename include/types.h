@@ -6,6 +6,7 @@
 #define MAX_FILTER_LEN 30
 #define MAX_CATEGORY_LEN 20
 #define MAX_DESCRIPTION_LEN 200
+#define REPORT_SIZE 296
 #include <stdint.h>
 #include <time.h>
 

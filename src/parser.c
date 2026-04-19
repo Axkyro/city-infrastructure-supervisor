@@ -27,17 +27,17 @@ Operation str_to_op(const char *str) {
 const char *op_to_str(Operation op) {
     switch(op) {
         case Add:
-            return "--add";
+            return "add";
         case List:
-            return "--list";
+            return "list";
         case View:
-            return "--view";
+            return "view";
         case RemoveReport:
-            return "--remove_report";
+            return "remove_report";
         case UpdateThreshold:
-            return "--update_threshold";
+            return "update_threshold";
         case Filter:
-            return "--filter";
+            return "filter";
         case Invalid:
             return "Invalid";
     }
@@ -59,11 +59,11 @@ const char *role_to_str(Role role) {
     
     switch(role) {
         case Manager:
-            return "Manager";
+            return "manager";
         case Inspector:
-            return "Inspector";
+            return "inspector";
         case Missing:
-            return "Role Missing";
+            return "role missing";
     }
     return "Unknown Role Enum";
 }
