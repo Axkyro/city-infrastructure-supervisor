@@ -54,7 +54,7 @@ typedef struct {
 
 typedef struct {
     time_t timestamp; 
-    int32_t report_id;
+    uint32_t report_id;
     struct {
         float lat;
         float lng;

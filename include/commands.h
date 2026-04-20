@@ -20,7 +20,9 @@ int extract_permissions(struct stat *info);
 int enforce_permissions(const char *path, int permissions);
 
 int check_obj_sanity(struct stat *info, int permissions);
-int sanitize();
+int check_district_sanity(const char *path);
+
+// int sanitize_district(const char *path); optional
 
 int check_read_perm(int permissions, Role role);
 int check_write_perm(int permissions, Role role);

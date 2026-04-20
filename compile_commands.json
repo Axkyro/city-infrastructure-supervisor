@@ -1,0 +1,58 @@
+[
+  {
+    "file": "src/main.c",
+    "arguments": [
+      "/usr/sbin/gcc",
+      "-Wall",
+      "-I./include",
+      "-g",
+      "src/main.c",
+      "-o",
+      "bin/city_manager"
+    ],
+    "directory": "/home/axkyro/Projects/city-infrastructure-supervisor",
+    "output": "bin/city_manager"
+  },
+  {
+    "file": "src/parser.c",
+    "arguments": [
+      "/usr/sbin/gcc",
+      "-Wall",
+      "-I./include",
+      "-g",
+      "src/parser.c",
+      "-o",
+      "bin/city_manager"
+    ],
+    "directory": "/home/axkyro/Projects/city-infrastructure-supervisor",
+    "output": "bin/city_manager"
+  },
+  {
+    "file": "src/utils.c",
+    "arguments": [
+      "/usr/sbin/gcc",
+      "-Wall",
+      "-I./include",
+      "-g",
+      "src/utils.c",
+      "-o",
+      "bin/city_manager"
+    ],
+    "directory": "/home/axkyro/Projects/city-infrastructure-supervisor",
+    "output": "bin/city_manager"
+  },
+  {
+    "file": "src/commands.c",
+    "arguments": [
+      "/usr/sbin/gcc",
+      "-Wall",
+      "-I./include",
+      "-g",
+      "src/commands.c",
+      "-o",
+      "bin/city_manager"
+    ],
+    "directory": "/home/axkyro/Projects/city-infrastructure-supervisor",
+    "output": "bin/city_manager"
+  }
+]
