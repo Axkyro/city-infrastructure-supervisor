@@ -9,4 +9,11 @@ void report_dump(const Report *report);
 
 void bits_to_symbol(int permissions);
 void build_path(const char *district_id, const char *file, char *path);
+
+
+// AI GENERATED AS REQUIRED
+int parse_condition(const char *input, char *field, char *op, char *value);
+int match_condition(Report *r, const char *field, const char *op, const char *value);
+void free_command(Command *cmd);
+
 #endif

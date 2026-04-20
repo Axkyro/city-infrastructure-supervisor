@@ -39,6 +39,6 @@ int list(Command *cmd);
 int view(Command *cmd);
 int remove_report(Command *cmd);
 int update_threshold(Command *cmd);
-
+int filter(Command *cmd);
 
 #endif

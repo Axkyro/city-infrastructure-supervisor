@@ -509,4 +509,131 @@ int update_threshold(Command *cmd) {
     return 0;
 }
 
-int remove_report(Command *cmd) {}
+int remove_report(Command *cmd) {
+    struct stat info;
+
+    if (check_district_sanity(cmd->district_id) == -1) {
+        return -1;
+    }
+    if (cmd->role != Manager) {
+        fprintf(stderr, "Cannot remove report as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    }
+
+    char report_path[MAX_PATH_LEN];
+    build_path(cmd->district_id, "reports.dat", report_path);
+
+    // guaranteed to extract reports.dat info because of check_district_sanity
+    file_exists(report_path, &info);
+
+    if (!check_write_perm(extract_permissions(&info), cmd->role)) {
+        fprintf(stderr, "Cannot write reports.dat as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    }
+
+    int fd = open(report_path, O_RDWR);
+    if (fd == -1) {
+        perror(report_path);
+        return -1;
+    }
+    lseek(fd, 0, SEEK_SET);
+    size_t reports_count = info.st_size / sizeof(Report);
+    Report report;
+    for (size_t i = 0; i < reports_count; i++) {
+        if (read(fd, &report, sizeof(Report)) == -1) {
+            perror("read");
+            close(fd);
+            return -1;
+        }
+        if (report.report_id == cmd->extra.report_id) {
+
+            for (size_t k = i + 1; k < reports_count; k++) {
+
+                lseek(fd, k * sizeof(Report), SEEK_SET);
+                if (read(fd, &report, sizeof(Report)) == -1) {
+                    perror("read");
+                    close(fd);
+                    return -1;
+                }
+
+                lseek(fd, (k - 1) * sizeof(Report), SEEK_SET);
+                if (write(fd, &report, sizeof(Report)) == -1) {
+                    perror("write");
+                    close(fd);
+                    return -1;
+                }
+            }
+
+            if (ftruncate(fd, (reports_count - 1) * sizeof(Report)) == -1) {
+                perror("ftruncate");
+                close(fd);
+                return -1;
+            }
+            close(fd);
+            log_operation(cmd, time(NULL));
+            return 0;
+        }
+    }
+    if (close(fd) == -1) {
+        perror(report_path);
+        return -1;
+    }
+    log_operation(cmd, time(NULL));
+    printf("Couldn't find report with report_id: [%d]!\n",
+           cmd->extra.report_id);
+    return 0;
+}
+
+int filter(Command *cmd) {
+    struct stat info;
+
+    if (check_district_sanity(cmd->district_id) == -1) {
+        return -1;
+    }
+
+    char report_path[MAX_PATH_LEN];
+    build_path(cmd->district_id, "reports.dat", report_path);
+
+    file_exists(report_path, &info);
+    if (!check_read_perm(extract_permissions(&info), cmd->role)) {
+        fprintf(stderr, "Cannot read reports.dat as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    }
+
+    int fd = open(report_path, O_RDONLY);
+    if (fd == -1) {
+        perror(report_path);
+        return -1;
+    }
+    size_t reports_count = info.st_size / sizeof(Report);
+    Report report;
+    for (size_t i = 0; i < reports_count; i++) {
+        if (read(fd, &report, sizeof(Report)) == -1) {
+            perror("read");
+            close(fd);
+            return -1;
+        }
+
+        int match = 1;
+        for (size_t k = 0; cmd->extra.filter_conditions[k] != NULL; k++) {
+            char field[30], op[5], value[30];
+            parse_condition(cmd->extra.filter_conditions[k], field, op, value);
+
+            if (match_condition(&report, field, op, value) == 0) {
+                match = 0;
+                break;
+            }
+        }
+        if (match)
+            report_dump(&report);
+    }
+    if (close(fd) == -1) {
+        perror(report_path);
+        return -1;
+    }
+    log_operation(cmd, time(NULL));
+    return 0;
+}
