@@ -79,6 +79,7 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
     cmd->role = Missing;
     cmd->district_id[0] = '\0';
     cmd->extra.filter_conditions = NULL;
+    cmd->user[0] = '\0';
     size_t i = 1; // arg counter
     if (argc == 1) {
         fprintf(stderr, "No flags!\n");

@@ -3,46 +3,57 @@
 #include "types.h"
 #include "utils.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
 #define PROGRAM_FAIL_ARGS 1
+#define PROGRAM_FAIL_CMD 3
 #define PROGRAM_FAIL_OP 2
 
 int main(int argc, char **argv) {
     Command cmd;
+    int status = 0;
+
     if (parse_arguments(argc, argv, &cmd) != 0) {
         fprintf(stderr, "Bad Arguments!\n");
-        exit(PROGRAM_FAIL_ARGS);
+        return PROGRAM_FAIL_ARGS;
     }
-    command_dump(&cmd);
-    // command_dump(&cmd);
-    switch (cmd.operation) {
-    case Add:
-        if (add(&cmd) != 0) {
-            printf("Error --add\n");
-            exit(PROGRAM_FAIL_OP);
+
+    if (cmd.operation == Invalid || cmd.role == Missing ||
+        strlen(cmd.user) == 0) {
+        fprintf(stderr, "Missing operation, role, or user!\n");
+        status = PROGRAM_FAIL_CMD;
+    } else {
+        switch (cmd.operation) {
+        case Add:
+            status = add(&cmd);
+            break;
+        case List:
+            status = list(&cmd);
+            break;
+        case View:
+            status = view(&cmd);
+            break;
+        case RemoveReport:
+            status = remove_report(&cmd);
+            break;
+        case Filter:
+            status = filter(&cmd);
+            break;
+        case UpdateThreshold:
+            status = update_threshold(&cmd);
+            break;
+        default:
+            printf("Not yet implemented!\n");
+            status = -1;
         }
-        break;
-    case List:
-        if (list(&cmd) != 0) {
-            printf("Error --list\n");
-            exit(PROGRAM_FAIL_OP);
+
+        if (status != 0) {
+            fprintf(stderr, "Error during --%s\n", op_to_str(cmd.operation));
+            status = PROGRAM_FAIL_OP;
         }
-        break;
-    case View:
-        if (view(&cmd) != 0) {
-            printf("Error --view\n");
-            exit(PROGRAM_FAIL_OP);
-        }
-        break;
-    case UpdateThreshold:
-        if (update_threshold(&cmd) != 0) {
-            printf("Error --update_threshold\n");
-            exit(PROGRAM_FAIL_OP);
-        }
-        break;
-    default:
-        printf("Not yet implemented!");
     }
-    return 0;
+
+    free_command(&cmd);
+
+    return status;
 }
