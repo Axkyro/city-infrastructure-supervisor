@@ -15,7 +15,7 @@
 #define DISTRICT_CFG_PERMS      0640
 
 #define MIN_ESCALATION_LEVEL 2
-#define MAX_ESCALATION_DIGITS_LEN 2 // must always be >= 2
+#define MAX_ESCALATION_DIGITS_LEN 5 // must always be >= 2
 
 #define INITIAL_REPORT_ID 0
 

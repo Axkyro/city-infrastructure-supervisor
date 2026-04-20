@@ -37,6 +37,7 @@ int input_report(Report *report, Command *cmd);
 int add(Command *cmd);
 int list(Command *cmd);
 int view(Command *cmd);
+int remove_report(Command *cmd);
 int update_threshold(Command *cmd);
 
 

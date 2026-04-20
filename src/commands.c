@@ -187,7 +187,6 @@ int check_write_perm(int permissions, Role role) {
     return 0;
 }
 
-//
 void log_operation(Command *cmd, time_t timestamp) {
 
     char log_path[MAX_PATH_LEN];
@@ -197,7 +196,7 @@ void log_operation(Command *cmd, time_t timestamp) {
     if (!file_exists(log_path, &info))
         return;
 
-    if (!check_write_perm(cmd->role, extract_permissions(&info))) {
+    if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write to log as: [%s]!\n",
                 role_to_str(cmd->role));
         return;
@@ -322,15 +321,11 @@ int add(Command *cmd) {
     struct stat info;
 
     // verifying district folder integrity
-
     if (!directory_exists(cmd->district_id, &info)) {
         if (create_district(cmd) == -1)
             return -1;
     } else if (check_district_sanity(cmd->district_id) == -1) {
         // sanitize_district(cmd->district_id);
-        fprintf(stderr, "Irregular file permissions on district found: [%s]!\n",
-                cmd->district_id);
-
         return -1;
     }
 
@@ -342,8 +337,8 @@ int add(Command *cmd) {
     file_exists(report_path, &info); // we retrieve info
 
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
-        printf("Cannot write to reports.dat as: [%s]!\n",
-               role_to_str(cmd->role));
+        fprintf(stderr, "Cannot write to reports.dat as: [%s]!\n",
+                role_to_str(cmd->role));
         return -1;
     }
 
@@ -363,6 +358,7 @@ int add(Command *cmd) {
         lseek(fd, -sizeof(Report) + sizeof(time_t), SEEK_END);
         if (read(fd, &new_report.report_id, sizeof(uint32_t)) == -1) {
             perror("read");
+            close(fd);
             return -1;
         }
         new_report.report_id += 1;
@@ -370,6 +366,7 @@ int add(Command *cmd) {
 
     if (write(fd, &new_report, sizeof(Report)) == -1) {
         perror("write");
+        close(fd);
         return -1;
     }
     close(fd);
@@ -377,152 +374,139 @@ int add(Command *cmd) {
     return 0;
 }
 
-/*
-int update_threshold(Command *cmd) {
-    char path[MAX_PATH_LEN];
-    snprintf(path, MAX_PATH_LEN, "%s/district.cfg", cmd->district_id);
-    log_op(cmd, time(NULL));
-    if(extract_permissions(path) != DISTRICT_CFG_FLAGS) {
-        fprintf(stderr, "Modified [%s] permissions, refusing to continue!\n",
-path); return -1;
-    }
-    if(cmd->role != Manager) {
-        printf("You cannot change threshold as %s\n", role_to_str(cmd->role));
-        return 0;
-    }
-    int fd = open(path, O_WRONLY);
-    if(fd == -1) {
-        fprintf(stderr, "Couldn't open: [%s]\n", path);
-        return 0;
-    }
-    char to_write[MAX_SEVERITY_DIGITS_LEN];
-    snprintf(to_write, MAX_SEVERITY_DIGITS_LEN, "%hhu\n",
-cmd->extra.new_threshold); if(write(fd, to_write, MAX_SEVERITY_DIGITS_LEN) !=
-MAX_SEVERITY_DIGITS_LEN){ fprintf(stderr, "Couldn't set new_threshold!\n");
-        return -1;
-    }
-    return 0;
-
-}
-
-int add(Command *cmd) {
-    if(!exists_district(cmd->district_id))
-        if(create_district(cmd) != 0)
-            return -1;
-
-    Report new_report;
-    new_report.report_id = INITIAL_REPORT_ID;
-    if(input_report(&new_report, cmd) != 0) {
-        return -1;
-    }
-
-    char reports_path[MAX_PATH_LEN];
-    snprintf(reports_path, MAX_PATH_LEN, "%s/reports.dat", cmd->district_id);
-
-    int fd = open(reports_path, O_APPEND | O_RDWR | O_CREAT, REPORTS_DAT_FLAGS);
-
-    if(fd == -1) {
-        fprintf(stderr, "Error on: %s\n", reports_path);
-        return -1;
-    }
-    if(!is_empty_file(reports_path)) {
-        // reading the last report value
-        lseek(fd,-REPORT_SIZE + sizeof(new_report.timestamp), SEEK_END);
-        if(read(fd, &new_report.report_id, sizeof(new_report.report_id)) == -1)
-{ fprintf(stderr, "Couldn't read last record_id!\n"); return -1;
-        }
-        new_report.report_id += 1;
-    }
-
-    if(write(fd, &new_report, (size_t)sizeof(new_report))!= sizeof(Report)) {
-        fprintf(stderr, "Couldn't write report!\n");
-        report_dump(&new_report);
-    }
-    close(fd);
-    log_op(cmd, new_report.timestamp);
-    return 0;
-}
-int view(Command *cmd) {
-if(!exists_district(cmd->district_id)) {
-        fprintf(stderr, "District: [%s] doesn't exist!\n", cmd->district_id);
-        return -1;
-    }
-
-    log_op(cmd, time(NULL));
-    char path[MAX_PATH_LEN];
-    snprintf(path, MAX_PATH_LEN, "%s/reports.dat", cmd->district_id);
-    int fd = open(path, O_RDONLY, REPORTS_DAT_FLAGS);
-    if(fd==-1) {
-        fprintf(stderr, "Couldn't open: %s\n", path);
-        return -1;
-    }
-
+int list(Command *cmd) {
     struct stat info;
-    if(stat(path, &info) == -1) {
-        fprintf(stderr, "Failed stat on %s\n", path);
+
+    if (check_district_sanity(cmd->district_id) == -1) {
         return -1;
     }
 
-    if (is_empty_file(path)){
-        printf("No reports!\n");
-        return 0;
+    char report_path[MAX_PATH_LEN];
+    build_path(cmd->district_id, "reports.dat", report_path);
+
+    // guaranteed to extract reports.dat info because of check_district_sanity
+    file_exists(report_path, &info);
+    if (!check_read_perm(extract_permissions(&info), cmd->role)) {
+        fprintf(stderr, "Cannot read reports.dat as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
     }
+
+    printf("File Permissions: ");
+    bits_to_symbol(extract_permissions(&info));
+    printf(" | Last modification time: %ld | File size: %ld\n", info.st_mtime,
+           info.st_size);
+
+    int fd = open(report_path, O_RDONLY);
+    if (fd == -1) {
+        perror(report_path);
+        return -1;
+    }
+    size_t reports_count = info.st_size / sizeof(Report);
     Report report;
-    for(int i = 0; i < info.st_size / REPORT_SIZE; i++)
-    {
-        if(read(fd, &report, REPORT_SIZE ) != REPORT_SIZE) {
-            fprintf(stderr, "Failed reading! Corrupted reports.dat in [%s]!\n",
-                    path);
+    for (size_t i = 0; i < reports_count; i++) {
+        if (read(fd, &report, sizeof(Report)) == -1) {
+            perror("read");
+            close(fd);
             return -1;
         }
-        if(report.report_id == cmd->extra.report_id) {
-            printf("Found Report!\n");
+        report_dump(&report);
+    }
+    if (close(fd) == -1) {
+        perror(report_path);
+        return -1;
+    }
+    log_operation(cmd, time(NULL));
+    return 0;
+}
+
+int view(Command *cmd) {
+    struct stat info;
+
+    if (check_district_sanity(cmd->district_id) == -1) {
+        return -1;
+    }
+
+    char report_path[MAX_PATH_LEN];
+    build_path(cmd->district_id, "reports.dat", report_path);
+
+    // guaranteed to extract reports.dat info because of check_district_sanity
+    file_exists(report_path, &info);
+    if (!check_read_perm(extract_permissions(&info), cmd->role)) {
+        fprintf(stderr, "Cannot read reports.dat as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    }
+
+    int fd = open(report_path, O_RDONLY);
+    if (fd == -1) {
+        perror(report_path);
+        return -1;
+    }
+    size_t reports_count = info.st_size / sizeof(Report);
+    Report report;
+    for (size_t i = 0; i < reports_count; i++) {
+        if (read(fd, &report, sizeof(Report)) == -1) {
+            perror("read");
+            close(fd);
+            return -1;
+        }
+        if (report.report_id == cmd->extra.report_id) {
+            close(fd);
+            log_operation(cmd, time(NULL));
             report_dump(&report);
             return 0;
         }
-
     }
-    printf("Failed to find report id: [%d]\n", cmd->extra.report_id);
-    return -1;
-
-}
-int list(Command *cmd) {
-    if(!exists_district(cmd->district_id)) {
-        fprintf(stderr, "District: [%s] doesn't exist!\n", cmd->district_id);
+    if (close(fd) == -1) {
+        perror(report_path);
         return -1;
     }
-
-    log_op(cmd, time(NULL));
-    char path[MAX_PATH_LEN];
-    snprintf(path, MAX_PATH_LEN, "%s/reports.dat", cmd->district_id);
-    int fd = open(path, O_RDONLY, REPORTS_DAT_FLAGS);
-    if(fd==-1) {
-        fprintf(stderr, "Couldn't open: %s\n", path);
-        return -1;
-    }
-
-    struct stat info;
-    if(stat(path, &info) == -1) {
-        fprintf(stderr, "Failed stat on %s\n", path);
-        return -1;
-    }
-    int permissions = extract_permissions(path);
-    printf("File: %s | ", path); bits_to_symbol(permissions);
-    printf("\nLast modification: %ld | size: %ld\n", info.st_mtime,
-info.st_size); printf("Reports:\n"); if (is_empty_file(path)){ printf("No
-reports!"); return 0;
-    }
-    Report report;
-    for(int i = 0; i < info.st_size / REPORT_SIZE; i++)
-    {
-        if(read(fd, &report, REPORT_SIZE ) != REPORT_SIZE) {
-            fprintf(stderr, "Failed reading! Corrupted reports.dat in [%s]!\n",
-                    path);
-            return -1;
-        }
-        printf("==============================================\n");
-        report_dump(&report);
-    }
+    log_operation(cmd, time(NULL));
+    printf("Couldn't find report with report_id: [%d]!\n",
+           cmd->extra.report_id);
     return 0;
 }
-*/
+
+int update_threshold(Command *cmd) {
+    if (check_district_sanity(cmd->district_id) == -1) {
+        return -1;
+    }
+
+    char path[MAX_PATH_LEN];
+    build_path(cmd->district_id, "district.cfg", path);
+
+    struct stat info;
+    stat(path, &info);
+
+    if (!check_write_perm(extract_permissions(&info), cmd->role)) {
+        fprintf(stderr, "Cannot write to district.cfg as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    }
+
+    int fd = open(path, O_WRONLY | O_TRUNC);
+    if (fd == -1) {
+        perror(path);
+        return -1;
+    }
+
+    char new_threshold[MAX_ESCALATION_DIGITS_LEN];
+    snprintf(new_threshold, MAX_ESCALATION_DIGITS_LEN, "%hhu",
+             cmd->extra.new_threshold);
+
+    if (write(fd, new_threshold, strlen(new_threshold)) == -1) {
+        perror("Error writing to district.cfg");
+        close(fd);
+        return -1;
+    }
+
+    if (close(fd) == -1) {
+        perror(path);
+        return -1;
+    }
+    log_operation(cmd, time(NULL));
+    return 0;
+}
+
+int remove_report(Command *cmd) {}
