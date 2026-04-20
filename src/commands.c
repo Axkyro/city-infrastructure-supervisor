@@ -150,7 +150,7 @@ void log_operation(Command *cmd, time_t timestamp) {
         return;
 
     if(!check_write_perm(cmd->role, extract_permissions(&info))) {
-        fprintf(stderr, "Cannot write to log as: %s\n", role_to_str(cmd->role));
+        fprintf(stderr, "Cannot write to log as: [%s]!\n", role_to_str(cmd->role));
         return;
     }
     
@@ -171,30 +171,103 @@ void log_operation(Command *cmd, time_t timestamp) {
     }
 }
 
-/*
-void log_op(Command *cmd, time_t timestamp) {
-    if(cmd->role != Manager)
-        return;
-
+int create_district(Command *cmd) {
+    
+    if(create_directory(cmd->district_id, DISTRICT_PERMS) == -1)
+        return -1;
     char path[MAX_PATH_LEN];
-    snprintf(path, MAX_PATH_LEN, "%s/logged_district", cmd->district_id);
-    int fd = open(path, O_CREAT | O_APPEND | O_WRONLY, LOGGED_DISTRICT_FLAGS);
+    build_path(cmd->district_id, "reports.dat", path);
+    
+    if(create_file(path, REPORTS_DAT_PERMS) == -1)
+        return -1;
+    
+    char link_path[MAX_PATH_LEN];
+    snprintf(link_path, MAX_PATH_LEN, "active_reports-%s", cmd->district_id);
+    
+    if(create_symlink(path, link_path) == -1) {
+        return -1;
+    }
+
+
+    build_path(cmd->district_id, "logged_district", path);
+    
+    if(create_file(path, LOGGED_DISTRICT_PERMS) == -1)
+        return -1;
+    
+    build_path(cmd->district_id, "district.cfg", path);
+    
+    if(create_file(path, DISTRICT_CFG_PERMS) == -1)
+        return -1;
+    
+    // setting the district.cfg escalation threshold
+    int fd = open(path, O_WRONLY | O_TRUNC);
     if(fd == -1) {
-        fprintf(stderr, "Couldn't open: %s\n", path);
-        fprintf(stderr, "Failed to log!\n");
-        return;
+        perror(path);
+        return -1;
     }
-    char log[MAX_LOG_LEN];
-    memset(log, 0x00, sizeof(log));
-    snprintf(log, MAX_LOG_LEN, "%ld\t%s\t%s\t%s\n", 
-            timestamp, cmd->user, role_to_str(cmd->role),
-            op_to_str(cmd->operation));
-    if(write(fd, log, sizeof(log)) != sizeof(log)) {
-        fprintf(stderr, "Didn't write log!\n");
+
+    char min_escalation[MAX_ESCALATION_DIGITS_LEN];
+    snprintf(min_escalation, MAX_ESCALATION_DIGITS_LEN, "%hhu", MIN_ESCALATION_LEVEL);
+    
+    if(write(fd, min_escalation, strlen(min_escalation)) == -1) {
+        perror("Error writing to district.cfg");
+        return -1;
     }
-     
+
+    if(close(fd) == -1) {
+        perror(path);
+        return -1;
+    }
+    return 0;    
 }
 
+int input_report(Report *report, Command *cmd) {
+
+    memset(report, 0x00, sizeof(Report)); // making sure we have a blank report
+    
+    // this is safe, cmd->user is guaranteed to be '\0' terminated and fit
+    strcpy(report->inspector, cmd->user);
+
+    report->timestamp = time(NULL); // getting the time
+    
+    // reading coordinates
+    printf("X: "); scanf("%f", &report->coordinates.lng);
+    printf("Y: "); scanf("%f", &report->coordinates.lat);
+
+    // reading category
+    printf("Category (road/lighting/flooding/other): ");
+    scanf("%19s", report->issue_category);
+    report->issue_category[MAX_CATEGORY_LEN - 1] = '\0';
+
+    // reading severity 
+    printf("Severity level (1/2/3): ");
+    scanf("%hhu", &report->severity_level);
+    
+    // checking severity is within bounds
+    if(report->severity_level == 0 || report->severity_level > 3) {
+        fprintf(stderr, "Cannot have severity_level: [%hhu]!\n", report->severity_level);
+        return -1;
+    }
+    // reading description
+    printf("Description: ");
+    
+    // skipping whitespaces
+    int c;
+    while( (c = getchar()) != '\n' && c!=EOF);
+
+    fgets(report->description, MAX_DESCRIPTION_LEN, stdin);
+    size_t description_len = strlen(report->description);
+
+    if(description_len > 0 && report->description[description_len-1] == '\n')
+        report->description[description_len - 1] = '\0';
+
+    return 0;
+}
+
+
+
+
+/*
 int update_threshold(Command *cmd) {
     char path[MAX_PATH_LEN];
     snprintf(path, MAX_PATH_LEN, "%s/district.cfg", cmd->district_id);
@@ -379,119 +452,6 @@ int list(Command *cmd) {
         printf("==============================================\n");
         report_dump(&report);
     }
-    return 0;
-}
-
-
-
-
-int exists_district(const char *path) {
-    struct stat info;
-    if(stat(path, &info) == -1) {
-        if (errno == ENOENT) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-int extract_permissions(const char *path) {
-    struct stat info;
-    if (stat(path, &info) != 0 ) {
-        fprintf(stderr, "Couldn't read [%s] permissions!\n", path);
-    }
-
-    return 0x1FF & info.st_mode;
-}
-int is_empty_file(const char *path) {
-    struct stat info;
-    
-    if (stat(path, &info) != 0 ) {
-        fprintf(stderr, "Couldn't read [%s] permissions!\n", path);
-    }
-
-    return info.st_size == 0;
-}
-
-
-int create_district(Command *cmd) {
-    
-    if(strlen(cmd->district_id) == 0) {
-        fprintf(stderr, "Empty district received!\n"); 
-        return -1; 
-    }
-
-    int check = mkdir(cmd->district_id, 0); // we could also do mkdir(..., DIR_FLAGS);
-    
-    if (check == -1) {
-        fprintf(stderr, "District [%s] directory already exists!\n", cmd->district_id);
-        return -1;
-    }
-
-    if (chmod(cmd->district_id, DIR_FLAGS) != 0) {
-        fprintf(stderr, "Couldn't change directory permissions!\n");
-        return -1;
-    }
-    int fd;
-    char path[MAX_PATH_LEN] = "";
-    strcat(path, cmd->district_id);
-    strcat(path, "/");
-    size_t cat_point = strlen(path);
-    
-    // creating reports.dat
-    strcpy(path + cat_point, "reports.dat");
-    fd = open(path, O_CREAT | O_RDONLY, 0);
-    
-    if(fd == -1) {
-        fprintf(stderr, "Couldn't create file: %s\n", path);
-        return -1;
-    }
-
-    if(chmod(path, REPORTS_DAT_FLAGS) != 0) {
-        fprintf(stderr, "Couldn't change permissions on: %s\n", path);
-        return -1;
-    }
-    close(fd);
-    
-    // creating district.cfg
-    strcpy(path + cat_point, "district.cfg");
-    fd = open(path, O_CREAT | O_WRONLY, 0);
-    
-    if(fd == -1) {
-        fprintf(stderr, "Couldn't create file: %s\n", path);
-        return -1;
-    }
-    
-    if(chmod(path, DISTRICT_CFG_FLAGS) != 0 ) {
-        fprintf(stderr, "Couldn't change permissions on: %s\n", path);
-        return -1;
-    }
-    uint8_t severity_threshold = MINIMUM_SEVERITY_THRESHOLD;
-    if(write(fd, &severity_threshold, sizeof(severity_threshold)) != sizeof(severity_threshold)) {
-        fprintf(stderr, "Couln't set minimum severity threshold!\n");
-        return -1;
-    }
-    close(fd);
-
-    // creating logged_district
-    strcpy(path + cat_point, "logged_district");
-    fd = open(path, O_CREAT | O_RDONLY, 0);
-
-    if(fd == -1) {
-        fprintf(stderr, "Couldn't create file: %s\n", path);
-        return -1;
-    }
-
-    if(chmod(path, LOGGED_DISTRICT_FLAGS) != 0) {
-        fprintf(stderr, "Couldn't change permissions on: %s\n", path);
-        return -1;
-    }
-
-    close(fd);
-    
-    
-
-
     return 0;
 }
 */

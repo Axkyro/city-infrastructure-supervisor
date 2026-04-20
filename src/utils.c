@@ -24,7 +24,7 @@ void report_dump(const Report *report) {
 }
 
 void bits_to_symbol(int permissions) {
-    char *symbols="xwrxwrxwr";
+    const char *symbols="xwrxwrxwr";
     for(int i = 8; i >= 0; i--) {
         printf("%c", 0x1 & (permissions >> i) ? symbols[i] : '-');
     }
