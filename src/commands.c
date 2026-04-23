@@ -141,8 +141,10 @@ int check_district_sanity(const char *path) {
         fprintf(stderr, "Cannot find file: [%s]!\n", file_path);
         // checking if a dangling symlink exists
         snprintf(file_path, MAX_PATH_LEN, "active_reports-%s", path);
-        if (symlink_exists(file_path, &info))
+        if (symlink_exists(file_path, &info)) {
             remove_symlink(file_path);
+            fprintf(stderr, "Warning, dangling symlink removed!\n");
+        }
         return -1;
     } else if (!check_obj_sanity(&info, REPORTS_DAT_PERMS)) {
         fprintf(stderr, "Wrong file permissions: [%s]!\n", file_path);
@@ -481,7 +483,10 @@ int update_threshold(Command *cmd) {
     build_path(cmd->district_id, "district.cfg", path);
 
     struct stat info;
-    stat(path, &info);
+    if (stat(path, &info) == -1) {
+        perror("stat");
+        return -1;
+    }
 
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write to district.cfg as: [%s]!\n",
