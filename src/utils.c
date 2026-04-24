@@ -47,22 +47,31 @@ void build_path(const char *district, const char *file, char *path) {
 // THE FUNCTIONS BELOW ARE AI GENERATED AS PER REQUIREMENTS
 
 int compare_int(int a, const char *op, int b) {
-    if (strcmp(op, "==") == 0) return a == b;
-    if (strcmp(op, "!=") == 0) return a != b;
-    if (strcmp(op, "<")  == 0) return a < b;
-    if (strcmp(op, "<=") == 0) return a <= b;
-    if (strcmp(op, ">")  == 0) return a > b;
-    if (strcmp(op, ">=") == 0) return a >= b;
+    if (strcmp(op, "==") == 0)
+        return a == b;
+    if (strcmp(op, "!=") == 0)
+        return a != b;
+    if (strcmp(op, "<") == 0)
+        return a < b;
+    if (strcmp(op, "<=") == 0)
+        return a <= b;
+    if (strcmp(op, ">") == 0)
+        return a > b;
+    if (strcmp(op, ">=") == 0)
+        return a >= b;
     return 0;
 }
 
 int compare_str(const char *a, const char *op, const char *b) {
-    if (strcmp(op, "==") == 0) return strcmp(a, b) == 0;
-    if (strcmp(op, "!=") == 0) return strcmp(a, b) != 0;
+    if (strcmp(op, "==") == 0)
+        return strcmp(a, b) == 0;
+    if (strcmp(op, "!=") == 0)
+        return strcmp(a, b) != 0;
     return 0; // invalid for strings
 }
 
-int match_condition(Report *r, const char *field, const char *op, const char *value) {
+int match_condition(Report *r, const char *field, const char *op,
+                    const char *value) {
     if (!r || !field || !op || !value)
         return 0;
 

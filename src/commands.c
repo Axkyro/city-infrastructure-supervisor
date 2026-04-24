@@ -203,11 +203,13 @@ void log_operation(Command *cmd, time_t timestamp) {
     if (!file_exists(log_path, &info))
         return;
 
+    /* if writing to log is restricted to manager
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write to log as: [%s]!\n",
                 role_to_str(cmd->role));
         return;
     }
+    */
 
     char log_message[MAX_LOG_LEN];
     snprintf(log_message, MAX_LOG_LEN, "%ld\t%s\t%s\t%s\n", timestamp,
