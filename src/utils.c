@@ -46,69 +46,78 @@ void build_path(const char *district, const char *file, char *path) {
 
 // THE FUNCTIONS BELOW ARE AI GENERATED AS PER REQUIREMENTS
 
+int compare_int(int a, const char *op, int b) {
+    if (strcmp(op, "==") == 0) return a == b;
+    if (strcmp(op, "!=") == 0) return a != b;
+    if (strcmp(op, "<")  == 0) return a < b;
+    if (strcmp(op, "<=") == 0) return a <= b;
+    if (strcmp(op, ">")  == 0) return a > b;
+    if (strcmp(op, ">=") == 0) return a >= b;
+    return 0;
+}
+
+int compare_str(const char *a, const char *op, const char *b) {
+    if (strcmp(op, "==") == 0) return strcmp(a, b) == 0;
+    if (strcmp(op, "!=") == 0) return strcmp(a, b) != 0;
+    return 0; // invalid for strings
+}
+
+int match_condition(Report *r, const char *field, const char *op, const char *value) {
+    if (!r || !field || !op || !value)
+        return 0;
+
+    // severity (uint8_t)
+    if (strcmp(field, "severity") == 0) {
+        int val = atoi(value);
+        return compare_int(r->severity_level, op, val);
+    }
+
+    // category (string)
+    if (strcmp(field, "category") == 0) {
+        return compare_str(r->issue_category, op, value);
+    }
+
+    // inspector (string)
+    if (strcmp(field, "inspector") == 0) {
+        return compare_str(r->inspector, op, value);
+    }
+
+    // timestamp (time_t)
+    if (strcmp(field, "timestamp") == 0) {
+        long val = atol(value);
+        return compare_int((long)r->timestamp, op, val);
+    }
+
+    return 0; // unknown field
+}
+
 int parse_condition(const char *input, char *field, char *op, char *value) {
+    if (!input || !field || !op || !value)
+        return -1;
+
+    // Find first ':' (field separator)
     const char *first_colon = strchr(input, ':');
     if (!first_colon)
         return -1;
 
+    // Find second ':' (operator separator)
     const char *second_colon = strchr(first_colon + 1, ':');
     if (!second_colon)
         return -1;
 
+    // Extract field
     size_t field_len = first_colon - input;
     strncpy(field, input, field_len);
     field[field_len] = '\0';
 
+    // Extract operator
     size_t op_len = second_colon - (first_colon + 1);
     strncpy(op, first_colon + 1, op_len);
     op[op_len] = '\0';
 
+    // Extract value
     strcpy(value, second_colon + 1);
 
-    return 0;
-}
-
-int match_condition(Report *r, const char *field, const char *op,
-                    const char *value) {
-    if (strcmp(field, "severity") == 0) {
-        uint8_t val = (uint8_t)atoi(value);
-        if (strcmp(op, "==") == 0)
-            return r->severity_level == val;
-        if (strcmp(op, "!=") == 0)
-            return r->severity_level != val;
-        if (strcmp(op, "<") == 0)
-            return r->severity_level < val;
-        if (strcmp(op, "<=") == 0)
-            return r->severity_level <= val;
-        if (strcmp(op, ">") == 0)
-            return r->severity_level > val;
-        if (strcmp(op, ">=") == 0)
-            return r->severity_level >= val;
-    } else if (strcmp(field, "timestamp") == 0) {
-        time_t val = (time_t)atol(value);
-        if (strcmp(op, "==") == 0)
-            return r->timestamp == val;
-        if (strcmp(op, "!=") == 0)
-            return r->timestamp != val;
-        if (strcmp(op, "<") == 0)
-            return r->timestamp < val;
-        if (strcmp(op, "<=") == 0)
-            return r->timestamp <= val;
-        if (strcmp(op, ">") == 0)
-            return r->timestamp > val;
-        if (strcmp(op, ">=") == 0)
-            return r->timestamp >= val;
-    } else if (strcmp(field, "category") == 0) {
-        if (strcmp(op, "==") == 0)
-            return strcmp(r->issue_category, value) == 0;
-        if (strcmp(op, "!=") == 0)
-            return strcmp(r->issue_category, value) != 0;
-    } else if (strcmp(field, "inspector") == 0) {
-        if (strcmp(op, "==") == 0)
-            return strcmp(r->inspector, value) == 0;
-        if (strcmp(op, "!=") == 0)
-            return strcmp(r->inspector, value) != 0;
-    }
     return 0;
 }
 

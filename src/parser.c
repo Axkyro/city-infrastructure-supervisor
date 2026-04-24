@@ -192,7 +192,7 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
                 i += 3;
                 break;
 
-            // THE LINE BELOW IS AI GENERATED AS PER REQUIREMENTS
+            // THE CASE BELOW IS AI GENERATED
             case Filter:
                 if (i + 1 >= argc) {
                     fprintf(stderr, "--filter [district_id] [conditions...] "

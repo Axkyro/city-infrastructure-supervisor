@@ -45,8 +45,8 @@ int create_file(const char *path, int permissions) {
     }
 
     close(fd);
-    enforce_permissions(path, permissions); // <-- uses chmod
-
+    if (enforce_permissions(path, permissions) == -1) // <-- uses chmod
+        return -1;
     return 0;
 }
 
@@ -56,7 +56,8 @@ int create_directory(const char *path, int permissions) {
         perror(path);
         return -1;
     }
-
+    if (enforce_permissions(path, permissions) == -1)
+        return -1;
     return 0;
 }
 
@@ -340,8 +341,9 @@ int add(Command *cmd) {
     build_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to exist because of check_district_sanity
-    file_exists(report_path, &info); // we retrieve info
-
+    if (file_exists(report_path, &info) == 0) { // we retrieve info
+        fprintf(stderr, "Cannot find: [%s]!\n", report_path);
+    }
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write to reports.dat as: [%s]!\n",
                 role_to_str(cmd->role));
@@ -349,7 +351,8 @@ int add(Command *cmd) {
     }
 
     Report new_report;
-    input_report(&new_report, cmd);
+    if (input_report(&new_report, cmd) == -1)
+        return -1;
 
     new_report.report_id = INITIAL_REPORT_ID;
 
@@ -361,7 +364,7 @@ int add(Command *cmd) {
     }
 
     if (!file_empty(&info)) { // we have to read what the last report_id was
-        lseek(fd, -sizeof(Report) + sizeof(time_t), SEEK_END);
+        lseek(fd, -(off_t)sizeof(Report) + (off_t)sizeof(time_t), SEEK_END);
         if (read(fd, &new_report.report_id, sizeof(uint32_t)) == -1) {
             perror("read");
             close(fd);
@@ -391,7 +394,9 @@ int list(Command *cmd) {
     build_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to extract reports.dat info because of check_district_sanity
-    file_exists(report_path, &info);
+    if (file_exists(report_path, &info) == 0) { // we retrieve info
+        fprintf(stderr, "Cannot find: [%s]!\n", report_path);
+    }
     if (!check_read_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot read reports.dat as: [%s]!\n",
                 role_to_str(cmd->role));
@@ -437,7 +442,10 @@ int view(Command *cmd) {
     build_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to extract reports.dat info because of check_district_sanity
-    file_exists(report_path, &info);
+
+    if (file_exists(report_path, &info) == 0) {
+        fprintf(stderr, "Cannot find: [%s]!\n", report_path);
+    }
     if (!check_read_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot read reports.dat as: [%s]!\n",
                 role_to_str(cmd->role));
@@ -534,7 +542,9 @@ int remove_report(Command *cmd) {
     build_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to extract reports.dat info because of check_district_sanity
-    file_exists(report_path, &info);
+    if (file_exists(report_path, &info) == 0) {
+        fprintf(stderr, "Cannot find: [%s]!\n", report_path);
+    }
 
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write reports.dat as: [%s]!\n",
@@ -605,7 +615,10 @@ int filter(Command *cmd) {
     char report_path[MAX_PATH_LEN];
     build_path(cmd->district_id, "reports.dat", report_path);
 
-    file_exists(report_path, &info);
+    if (file_exists(report_path, &info) == 0) {
+        fprintf(stderr, "Cannot find: [%s]!\n", report_path);
+    }
+
     if (!check_read_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot read reports.dat as: [%s]!\n",
                 role_to_str(cmd->role));
@@ -628,7 +641,8 @@ int filter(Command *cmd) {
 
         int match = 1;
         for (size_t k = 0; cmd->extra.filter_conditions[k] != NULL; k++) {
-            char field[30], op[5], value[30];
+            char field[MAX_FILTER_FIELD_LEN], op[MAX_FILTER_OP_LEN],
+                value[MAX_FILTER_VALUE_LEN];
             parse_condition(cmd->extra.filter_conditions[k], field, op, value);
 
             if (match_condition(&report, field, op, value) == 0) {
