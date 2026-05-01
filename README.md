@@ -18,8 +18,8 @@ Current examples:
 ./city_manager --role <manager|inspector> --user <username> <operation> <district_id> [extra_args]
 
 ./city_manager --role inspector --user kyro --add downtown
-./city_manager --role inspector --user kyro --list downtown -- list all reports
-./city_manager --role inspector --user kyro --view downtown 0 -- to see specific report
+./city_manager --role inspector --user kyro --list downtown # lists all reports
+./city_manager --role inspector --user kyro --view downtown 0 # to see specific report
 
 other operations:
 --update_threshold <district_id> <new_threshold_value> (only for manager)
