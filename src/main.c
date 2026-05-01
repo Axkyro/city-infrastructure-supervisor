@@ -2,16 +2,28 @@
 #include "parser.h"
 #include "types.h"
 #include "utils.h"
+#include <asm-generic/errno-base.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define PROGRAM_FAIL_ARGS 1
 #define PROGRAM_FAIL_CMD 3
 #define PROGRAM_FAIL_OP 2
+#define PROGRAM_FAIL_INIT 4
+#define DISTRICTS_DIR_PERM 0755
 
 int main(int argc, char **argv) {
     Command cmd;
     int status = 0;
+
+    if (mkdir("other", DISTRICTS_DIR_PERM) != 0) {
+        if (errno != EEXIST) {
+            fprintf(stderr, "Couldn't create dir to store districts!");
+            return PROGRAM_FAIL_INIT;
+        }
+    }
 
     if (parse_arguments(argc, argv, &cmd) != 0) {
         fprintf(stderr, "Bad Arguments!\n");
