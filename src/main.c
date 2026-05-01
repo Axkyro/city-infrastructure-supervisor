@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     Command cmd;
     int status = 0;
 
-    if (mkdir("other", DISTRICTS_DIR_PERM) != 0) {
+    if (mkdir("districts", DISTRICTS_DIR_PERM) != 0) {
         if (errno != EEXIST) {
             fprintf(stderr, "Couldn't create dir to store districts!");
             return PROGRAM_FAIL_INIT;
