@@ -34,4 +34,4 @@ To compile use: **make**
 
 The resulting executable will be found in ./bin/
 
-Districts will be created inside ./districts after running the program once
+Districts will be created inside ./bin/districts after running the program once
