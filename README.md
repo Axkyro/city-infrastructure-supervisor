@@ -18,17 +18,13 @@ General syntax: ./bin/city_manager --role <manager|inspector> --user <username> 
 Examples:
 
 * ./bin/city_manager --role inspector --user kyro --add downtown
-
 * ./bin/city_manager --role inspector --user kyro --list downtown # lists all reports
-
 * ./bin/city_manager --role inspector --user kyro --view downtown 0 # to see specific report
 
 Other operations:
 
 * --update_threshold <district_id> <new_threshold_value> (only for manager)
-
 * --remove_district <district_id> (only for manager)
-
 * --remove_report <district_id> <report_id> (only for manager)
 
 
