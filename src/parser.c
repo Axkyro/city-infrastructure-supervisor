@@ -21,6 +21,8 @@ Operation str_to_op(const char *str) {
         return UpdateThreshold;
     else if (strcmp("filter", str) == 0)
         return Filter;
+    else if (strcmp("remove_district", str) == 0)
+        return RemoveDistrict;
     else
         return Invalid;
 }
@@ -39,6 +41,8 @@ const char *op_to_str(Operation op) {
         return "update_threshold";
     case Filter:
         return "filter";
+    case RemoveDistrict:
+        return "remove_district";
     case Invalid:
         return "Invalid";
     }
@@ -191,7 +195,16 @@ int parse_arguments(int argc, char **argv, Command *cmd) {
                 }
                 i += 3;
                 break;
-
+            case RemoveDistrict:
+                if (i + 1 == argc) {
+                    fprintf(stderr, "--remove_district [arg] <-- missing!\n");
+                    free_command(cmd);
+                    return -1;
+                }
+                strncpy(cmd->district_id, argv[i + 1], MAX_DISTRICT_ID_LEN - 1);
+                cmd->district_id[MAX_DISTRICT_ID_LEN - 1] = '\0';
+                i += 2;
+                break;
             // THE CASE BELOW IS AI GENERATED
             case Filter:
                 if (i + 1 >= argc) {

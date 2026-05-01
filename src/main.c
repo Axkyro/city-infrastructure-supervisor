@@ -42,6 +42,9 @@ int main(int argc, char **argv) {
         case UpdateThreshold:
             status = update_threshold(&cmd);
             break;
+        case RemoveDistrict:
+            status = remove_district(&cmd);
+            break;
         default:
             printf("Not yet implemented!\n");
             status = -1;

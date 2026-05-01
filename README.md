@@ -8,3 +8,9 @@ monitors districts through a background process coordinated via signals, and rou
 
 ## Functionality:
 Work In Progress
+
+## To compile use:
+**make**
+The resulting executable will be found in ./bin/
+There is ambiguity in the spec on whether when doing an operation as inspector it should be logged or not.
+inside the log_operation command in /src/commands.c there is a snippet that can be uncommented if that is the case

@@ -9,7 +9,9 @@ int file_exists(const char *path, struct stat *info);
 int symlink_exists(const char *path, struct stat *info);
 
 int create_file(const char *path, int permissions);
+
 int create_directory(const char *path, int permissions);
+void remove_directory_recursive_force(const char *path);
 
 int create_symlink(const char *path, const char *link);
 int remove_symlink(const char *link);
@@ -33,12 +35,12 @@ int create_district(Command *cmd);
 
 int input_report(Report *report, Command *cmd);
 
-
 int add(Command *cmd);
 int list(Command *cmd);
 int view(Command *cmd);
 int remove_report(Command *cmd);
 int update_threshold(Command *cmd);
 int filter(Command *cmd);
+int remove_district(Command *cmd);
 
 #endif

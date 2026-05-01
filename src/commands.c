@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -60,6 +61,11 @@ int create_directory(const char *path, int permissions) {
         return -1;
     return 0;
 }
+void remove_directory_recursive_force(const char *path) {
+    execlp("rm", "rm", "-rf", path, NULL);
+    perror("execlp");
+    _exit(0); // in case execlp somehow fails
+}
 
 int create_symlink(const char *path, const char *link) {
 
@@ -101,8 +107,11 @@ int check_obj_sanity(struct stat *info, int permissions) {
     return extract_permissions(info) == permissions;
 }
 
-int check_district_sanity(const char *path) {
+int check_district_sanity(const char *district_id) {
     struct stat info;
+    char path[MAX_PATH_LEN];
+    build_dir_path(district_id, path);
+
     if (!directory_exists(path, &info)) {
         fprintf(stderr, "Cannot find district: [%s]!\n", path);
         return -1;
@@ -111,50 +120,49 @@ int check_district_sanity(const char *path) {
         return -1;
     }
 
-    char file_path[MAX_PATH_LEN];
-
     // verifying district.cfg :
-    build_path(path, "district.cfg", file_path);
+    build_file_path(district_id, "district.cfg", path);
 
-    if (!file_exists(file_path, &info)) {
-        fprintf(stderr, "Cannot find file: [%s]!\n", file_path);
+    if (!file_exists(path, &info)) {
+        fprintf(stderr, "Cannot find file: [%s]!\n", path);
         return -1;
     } else if (!check_obj_sanity(&info, DISTRICT_CFG_PERMS)) {
-        fprintf(stderr, "Wrong file permissions: [%s]!\n", file_path);
+        fprintf(stderr, "Wrong file permissions: [%s]!\n", path);
         return -1;
     }
 
     // verifying logged_district :
-    build_path(path, "logged_district", file_path);
+    build_file_path(district_id, "logged_district", path);
 
-    if (!file_exists(file_path, &info)) {
-        fprintf(stderr, "Cannot find file: [%s]!\n", file_path);
+    if (!file_exists(path, &info)) {
+        fprintf(stderr, "Cannot find file: [%s]!\n", path);
         return -1;
     } else if (!check_obj_sanity(&info, LOGGED_DISTRICT_PERMS)) {
-        fprintf(stderr, "Wrong file permissions: [%s]!\n", file_path);
+        fprintf(stderr, "Wrong file permissions: [%s]!\n", path);
         return -1;
     }
 
     // verifying reports.dat :
-    build_path(path, "reports.dat", file_path);
+    build_file_path(district_id, "reports.dat", path);
 
-    if (!file_exists(file_path, &info)) {
-        fprintf(stderr, "Cannot find file: [%s]!\n", file_path);
+    if (!file_exists(path, &info)) {
+        fprintf(stderr, "Cannot find file: [%s]!\n", path);
         // checking if a dangling symlink exists
-        snprintf(file_path, MAX_PATH_LEN, "active_reports-%s", path);
-        if (symlink_exists(file_path, &info)) {
-            remove_symlink(file_path);
+        // snprintf(file_path, MAX_PATH_LEN, "active_reports-%s", path);
+        build_symlink_path(district_id, path);
+        if (symlink_exists(path, &info)) {
+            remove_symlink(path);
             fprintf(stderr, "Warning, dangling symlink removed!\n");
         }
         return -1;
     } else if (!check_obj_sanity(&info, REPORTS_DAT_PERMS)) {
-        fprintf(stderr, "Wrong file permissions: [%s]!\n", file_path);
+        fprintf(stderr, "Wrong file permissions: [%s]!\n", path);
         return -1;
     }
 
-    snprintf(file_path, MAX_PATH_LEN, "active_reports-%s", path);
-    if (!symlink_exists(file_path, &info)) {
-        fprintf(stderr, "Cannot find file: [%s]!\n", file_path);
+    build_symlink_path(district_id, path);
+    if (!symlink_exists(path, &info)) {
+        fprintf(stderr, "Cannot find file: [%s]!\n", path);
         return -1;
     }
     return 0;
@@ -197,19 +205,19 @@ int check_write_perm(int permissions, Role role) {
 void log_operation(Command *cmd, time_t timestamp) {
 
     char log_path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "logged_district", log_path);
+    build_file_path(cmd->district_id, "logged_district", log_path);
 
     struct stat info;
     if (!file_exists(log_path, &info))
         return;
 
-    /* if writing to log is restricted to manager
+    // if writing to log is restricted to manager uncomment this part
+    /*
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write to log as: [%s]!\n",
                 role_to_str(cmd->role));
         return;
-    }
-    */
+    } */
 
     char log_message[MAX_LOG_LEN];
     snprintf(log_message, MAX_LOG_LEN, "%ld\t%s\t%s\t%s\n", timestamp,
@@ -229,28 +237,29 @@ void log_operation(Command *cmd, time_t timestamp) {
 }
 
 int create_district(Command *cmd) {
-
-    if (create_directory(cmd->district_id, DISTRICT_PERMS) == -1)
-        return -1;
     char path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "reports.dat", path);
+    build_dir_path(cmd->district_id, path);
+    if (create_directory(path, DISTRICT_PERMS) == -1)
+        return -1;
+
+    build_file_path(cmd->district_id, "reports.dat", path);
 
     if (create_file(path, REPORTS_DAT_PERMS) == -1)
         return -1;
 
     char link_path[MAX_PATH_LEN];
-    snprintf(link_path, MAX_PATH_LEN, "active_reports-%s", cmd->district_id);
+    build_symlink_path(cmd->district_id, link_path);
 
     if (create_symlink(path, link_path) == -1) {
         return -1;
     }
 
-    build_path(cmd->district_id, "logged_district", path);
+    build_file_path(cmd->district_id, "logged_district", path);
 
     if (create_file(path, LOGGED_DISTRICT_PERMS) == -1)
         return -1;
 
-    build_path(cmd->district_id, "district.cfg", path);
+    build_file_path(cmd->district_id, "district.cfg", path);
 
     if (create_file(path, DISTRICT_CFG_PERMS) == -1)
         return -1;
@@ -286,12 +295,16 @@ int input_report(Report *report, Command *cmd) {
     strcpy(report->inspector, cmd->user);
 
     report->timestamp = time(NULL); // getting the time
-
+    float lng;
+    float lat;
     // reading coordinates
     printf("X: ");
-    scanf("%f", &report->coordinates.lng);
+    scanf("%f", &lng);
     printf("Y: ");
-    scanf("%f", &report->coordinates.lat);
+    scanf("%f", &lat);
+
+    report->coordinates.lng = lng;
+    report->coordinates.lat = lat;
 
     // reading category
     printf("Category (road/lighting/flooding/other): ");
@@ -328,9 +341,11 @@ int input_report(Report *report, Command *cmd) {
 int add(Command *cmd) {
 
     struct stat info;
-
+    char path[MAX_PATH_LEN];
+    // we temporarily use report_path
+    build_dir_path(cmd->district_id, path);
     // verifying district folder integrity
-    if (!directory_exists(cmd->district_id, &info)) {
+    if (!directory_exists(path, &info)) {
         if (create_district(cmd) == -1)
             return -1;
     } else if (check_district_sanity(cmd->district_id) == -1) {
@@ -339,12 +354,11 @@ int add(Command *cmd) {
     }
 
     // verifying report file integirty
-    char report_path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "reports.dat", report_path);
+    build_file_path(cmd->district_id, "reports.dat", path);
 
     // guaranteed to exist because of check_district_sanity
-    if (file_exists(report_path, &info) == 0) { // we retrieve info
-        fprintf(stderr, "Cannot find: [%s]!\n", report_path);
+    if (file_exists(path, &info) == 0) { // we retrieve info
+        fprintf(stderr, "Cannot find: [%s]!\n", path);
     }
     if (!check_write_perm(extract_permissions(&info), cmd->role)) {
         fprintf(stderr, "Cannot write to reports.dat as: [%s]!\n",
@@ -358,10 +372,10 @@ int add(Command *cmd) {
 
     new_report.report_id = INITIAL_REPORT_ID;
 
-    int fd = open(report_path, O_APPEND | O_RDWR);
+    int fd = open(path, O_APPEND | O_RDWR);
 
     if (fd == -1) {
-        perror(report_path);
+        perror(path);
         return -1;
     }
 
@@ -393,7 +407,7 @@ int list(Command *cmd) {
     }
 
     char report_path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "reports.dat", report_path);
+    build_file_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to extract reports.dat info because of check_district_sanity
     if (file_exists(report_path, &info) == 0) { // we retrieve info
@@ -441,7 +455,7 @@ int view(Command *cmd) {
     }
 
     char report_path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "reports.dat", report_path);
+    build_file_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to extract reports.dat info because of check_district_sanity
 
@@ -490,7 +504,7 @@ int update_threshold(Command *cmd) {
     }
 
     char path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "district.cfg", path);
+    build_file_path(cmd->district_id, "district.cfg", path);
 
     struct stat info;
     if (stat(path, &info) == -1) {
@@ -541,7 +555,7 @@ int remove_report(Command *cmd) {
     }
 
     char report_path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "reports.dat", report_path);
+    build_file_path(cmd->district_id, "reports.dat", report_path);
 
     // guaranteed to extract reports.dat info because of check_district_sanity
     if (file_exists(report_path, &info) == 0) {
@@ -606,6 +620,44 @@ int remove_report(Command *cmd) {
            cmd->extra.report_id);
     return 0;
 }
+int remove_district(Command *cmd) {
+    struct stat info;
+
+    char path[MAX_PATH_LEN];
+    build_dir_path(cmd->district_id, path);
+    if (!directory_exists(path, &info)) {
+        fprintf(stderr, "Warning: district [%s] doesn't exist!\n",
+                cmd->district_id);
+        return 0;
+    }
+    // two ways, either check that it has write permission on the directory
+    if (!check_write_perm(extract_permissions(&info), cmd->role)) {
+        fprintf(stderr, "Cannot remove district as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    }
+    // or in our case we can do a cheap trick and do a match on the role
+    // enum
+    /*
+    if (cmd->role != Manager) {
+        fprintf(stderr, "Cannot remove district as: [%s]!\n",
+                role_to_str(cmd->role));
+        return -1;
+    } */
+
+    pid_t process = fork();
+    if (process == 0) // we are inside the child
+        remove_directory_recursive_force(path);
+    else                           // inside the parrent
+        waitpid(process, NULL, 0); // here 0 means wait for child process
+
+    build_symlink_path(cmd->district_id, path);
+    if (symlink_exists(path, &info))
+        if (remove_symlink(path) == -1)
+            return -1;
+
+    return 0;
+}
 
 int filter(Command *cmd) {
     struct stat info;
@@ -615,7 +667,7 @@ int filter(Command *cmd) {
     }
 
     char report_path[MAX_PATH_LEN];
-    build_path(cmd->district_id, "reports.dat", report_path);
+    build_file_path(cmd->district_id, "reports.dat", report_path);
 
     if (file_exists(report_path, &info) == 0) {
         fprintf(stderr, "Cannot find: [%s]!\n", report_path);

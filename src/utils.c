@@ -40,8 +40,16 @@ void bits_to_symbol(int permissions) {
     }
 }
 
-void build_path(const char *district, const char *file, char *path) {
-    snprintf(path, MAX_PATH_LEN, "%s/%s", district, file);
+void build_file_path(const char *district, const char *file, char *path) {
+    snprintf(path, MAX_PATH_LEN, "districts/%s/%s", district, file);
+}
+
+void build_symlink_path(const char *district, char *path) {
+    snprintf(path, MAX_PATH_LEN, "districts/active_reports-%s", district);
+}
+
+void build_dir_path(const char *district, char *path) {
+    snprintf(path, MAX_PATH_LEN, "districts/%s", district);
 }
 
 // THE FUNCTIONS BELOW ARE AI GENERATED AS PER REQUIREMENTS
