@@ -13,13 +13,13 @@ https://docs.google.com/document/d/1BoCPPOKTwwGXswjsYwY94Jp2G7nTr0SR-4fQndMcv8Y/
 ## Functionality:
 WIP
 
-General syntax: ./bin/city_manager --role <manager|inspector> --user <username> <operation> <district_id> [extra_args]
+General syntax: `./bin/city_manager --role <manager|inspector> --user <username> <operation> <district_id> [extra_args]`
 
 Examples:
 
-* ./bin/city_manager --role inspector --user kyro --add downtown
-* ./bin/city_manager --role inspector --user kyro --list downtown # lists all reports
-* ./bin/city_manager --role inspector --user kyro --view downtown 0 # to see specific report
+* `./bin/city_manager --role inspector --user kyro --add downtown`
+* `./bin/city_manager --role inspector --user kyro --list downtown # lists all reports`
+* `./bin/city_manager --role inspector --user kyro --view downtown 0 # to see specific report`
 
 Other operations:
 
