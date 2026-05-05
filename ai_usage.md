@@ -1,3 +1,4 @@
+Phase 1:
 I uploaded to the AI tools my header files commands.h, types.h and utils.h
 as well as access to my hand written parser.c function
 from there on the AI gave me the following functions:
@@ -24,3 +25,6 @@ and match_condition returns 1 if the record satisfies the condition and 0 otherw
 
 Tools used: Gemini, ChatGPT
 I learned that even with enough information sometimes LLMs such as the ones I used have a hard time integrating flawlessly (that is, on the first try) additional code into the codebase, and they need tinkering before being able to use their output.
+
+Phase 2:
+AI has been used to explain to me how to use sigaction() as well as rename certain variables or function names

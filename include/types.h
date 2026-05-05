@@ -16,7 +16,7 @@
 
 #define MIN_ESCALATION_LEVEL 2
 #define MAX_ESCALATION_DIGITS_LEN 5 // must always be >= 2
-
+#define MAX_PID_DIGITS_LEN 9        // >=2 as well
 #define MAX_FILTER_FIELD_LEN 35
 #define MAX_FILTER_OP_LEN 10
 #define MAX_FILTER_VALUE_LEN 30

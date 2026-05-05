@@ -3,7 +3,9 @@
 #include "types.h"
 #include "utils.h"
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -202,6 +204,34 @@ int check_write_perm(int permissions, Role role) {
     return 0;
 }
 
+void log_operation_message(Command *cmd, time_t timestamp,
+                           const char *message) {
+
+    char log_path[MAX_PATH_LEN];
+    build_file_path(cmd->district_id, "logged_district", log_path);
+
+    struct stat info;
+    if (!file_exists(log_path, &info))
+        return;
+
+    char log_message[MAX_LOG_LEN];
+    snprintf(log_message, MAX_LOG_LEN, "%ld\t%s\n", timestamp, message);
+
+    int fd = open(log_path, O_APPEND | O_WRONLY);
+
+    if (fd == -1) {
+        perror(log_path);
+        return;
+    }
+
+    if (write(fd, log_message, strlen(log_message)) == -1)
+        perror("Error writing to logged_district");
+
+    if (close(fd) == -1) {
+        perror(log_path);
+    }
+}
+
 void log_operation(Command *cmd, time_t timestamp) {
 
     char log_path[MAX_PATH_LEN];
@@ -211,23 +241,17 @@ void log_operation(Command *cmd, time_t timestamp) {
     if (!file_exists(log_path, &info))
         return;
 
-    // if writing to log is restricted to manager uncomment this part
-    /*
-    if (!check_write_perm(extract_permissions(&info), cmd->role)) {
-        fprintf(stderr, "Cannot write to log as: [%s]!\n",
-                role_to_str(cmd->role));
-        return;
-    } */
-
     char log_message[MAX_LOG_LEN];
     snprintf(log_message, MAX_LOG_LEN, "%ld\t%s\t%s\t%s\n", timestamp,
              cmd->user, role_to_str(cmd->role), op_to_str(cmd->operation));
 
     int fd = open(log_path, O_APPEND | O_WRONLY);
+
     if (fd == -1) {
         perror(log_path);
         return;
     }
+
     if (write(fd, log_message, strlen(log_message)) == -1)
         perror("Error writing to logged_district");
 
@@ -396,6 +420,45 @@ int add(Command *cmd) {
     }
     close(fd);
     log_operation(cmd, new_report.timestamp);
+
+    // retrieving monitor pid
+    char monitor_pid_path[MAX_PATH_LEN] = "districts/.monitor_pid";
+    fd = open(monitor_pid_path, O_RDONLY);
+    char monitor_pid_text[MAX_PID_DIGITS_LEN] = "";
+    pid_t monitor_pid;
+    if (fd == -1) {
+        fprintf(stderr, "Could not find pid file: [%s]!\n", monitor_pid_path);
+        log_operation_message(cmd, new_report.timestamp,
+                              "failed to inform monitor");
+        return -1;
+    }
+
+    if (read(fd, &monitor_pid_text, sizeof(monitor_pid_text)) == -1) {
+        fprintf(stderr, "Could not read pid from: [%s]!\n", monitor_pid_path);
+        log_operation_message(cmd, new_report.timestamp,
+                              "failed to inform monitor");
+        return -1;
+    }
+    // trying to transform text to pid
+
+    monitor_pid = atoi(monitor_pid_text);
+    if (monitor_pid == 0) {
+        fprintf(stderr, "Could not read pid from: [%s]!\n", monitor_pid_path);
+        log_operation_message(cmd, new_report.timestamp,
+                              "failed to inform monitor");
+        return -1;
+    }
+    // sending the signal
+    if (kill(monitor_pid, SIGUSR1) == -1) {
+        fprintf(stderr, "Failed to send signal to pid: [%d]!\n", monitor_pid);
+        log_operation_message(cmd, new_report.timestamp,
+                              "failed to inform monitor");
+        return -1;
+    }
+
+    close(fd);
+    log_operation_message(cmd, new_report.timestamp,
+                          "informed monitor of new report");
     return 0;
 }
 

@@ -30,9 +30,9 @@ int check_read_perm(int permissions, Role role);
 int check_write_perm(int permissions, Role role);
 
 void log_operation(Command *cmd, time_t timestamp);
+void log_operation_message(Command *cmd, time_t timestamp, const char *message);
 
 int create_district(Command *cmd);
-
 int input_report(Report *report, Command *cmd);
 
 int add(Command *cmd);
