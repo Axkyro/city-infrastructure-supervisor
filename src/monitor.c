@@ -47,6 +47,7 @@ int main() {
         perror("Error SIGINT");
         return 0;
     }
+
     if (sigaction(SIGUSR1, &action, NULL) == -1) {
         perror("Error SIGUSR1");
         return 0;
