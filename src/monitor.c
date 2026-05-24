@@ -1,5 +1,6 @@
 #include "types.h"
 #include <fcntl.h>
+#include <linux/limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,19 +11,41 @@
 #define OPEN_FAIL 1
 #define WRITE_FAIL 2
 #define DELETE_FAIL 3
+#define ALREADY_RUNNING 4
 
-void sig_handler(int signo);
+void sig_handler(int signo); // signal handler for SIGINT and SIGUSR1
 
 volatile sig_atomic_t KILL_PROGRAM = 0;
 
 int main() {
     // setup
     char path[MAX_PATH_LEN] = "districts/.monitor_pid";
-    int fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+    int fd = open(path, O_RDONLY, 0644);
+
+    if (fd != -1) {
+        char monitor_pid_text[MAX_PID_DIGITS_LEN] = "";
+
+        // strange fail case
+        if (read(fd, &monitor_pid_text, sizeof(monitor_pid_text)) == -1) {
+            return ALREADY_RUNNING;
+        }
+
+        printf("run: Monitor already running with pid: %s!\n",
+               monitor_pid_text);
+        fflush(stdout);
+
+        close(fd);
+        return ALREADY_RUNNING;
+    }
+
+    fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, 0644);
     if (fd == -1) {
         perror(path);
         return OPEN_FAIL;
     }
+
+    fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+
     pid_t monitor_pid = getpid();
     char process[MAX_PID_DIGITS_LEN];
     snprintf(process, MAX_PID_DIGITS_LEN, "%d", monitor_pid);
@@ -80,9 +103,11 @@ int main() {
 
 void sig_handler(int signo) {
     if (signo == SIGUSR1) {
-        printf("A new report has been added!\n");
+        printf("new: A new report has been added!\n");
+        fflush(stdout);
     } else if (signo == SIGINT) {
-        printf("SIGINT received. Ending monitor!\n");
+        printf("end: SIGINT received. Ending monitor!\n");
+        fflush(stdout);
         KILL_PROGRAM = 1;
     }
 }

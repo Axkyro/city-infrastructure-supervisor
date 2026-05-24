@@ -133,7 +133,9 @@ int parse_condition(const char *input, char *field, char *op, char *value) {
     op[op_len] = '\0';
 
     // Extract value
-    strcpy(value, second_colon + 1);
+    strncpy(value, second_colon + 1,
+            MAX_FILTER_VALUE_LEN - 1);      // modified by me
+    value[MAX_FILTER_VALUE_LEN - 1] = '\0'; // modified by me
 
     return 0;
 }
