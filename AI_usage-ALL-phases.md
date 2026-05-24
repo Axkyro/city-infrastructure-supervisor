@@ -28,3 +28,9 @@ I learned that even with enough information sometimes LLMs such as the ones I us
 
 Phase 2:
 AI has been used to explain to me how to use sigaction() as well as rename certain variables or function names
+
+Phase 3: 
+In Phase 3 I used AI as a code review tool, I uploaded my complete codebase and used
+it to check my implementation against the doc. 
+I also told it to verify there were no leftover bugs, check that all forks had corresponding waitpids 
+and generally make sure everything was in order before submission.
