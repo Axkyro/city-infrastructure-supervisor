@@ -20,6 +20,8 @@ void read_pipe_input(int fd);
 int END_PROGRAM = 0;
 
 int main(int argc, char *argv[]) {
+    pid_t pids[argc];
+    int child_count = 0;
 
     HubOperation op = parse_command(argc, argv);
     int fd[2];
@@ -28,11 +30,14 @@ int main(int argc, char *argv[]) {
     case StartMonitor: {
         pid_t ret = fork();
         if (ret == 0) {
+
             close(fd[0]);
             dup2(fd[1], STDOUT_FILENO);
             close(fd[1]);
             execl("./monitor_reports", "./monitor_reports", NULL);
             _exit(1);
+        } else {
+            pids[child_count++] = ret;
         }
         break;
     }
@@ -47,18 +52,18 @@ int main(int argc, char *argv[]) {
                 execl("./scorer", "./scorer", argv[i], NULL);
                 _exit(1);
             }
-
-            continue;
+            pids[child_count++] = child_scorer;
         }
-
         break;
     }
 
     default:
-        fprintf(stderr, "Not yet implemented!\n");
+        fprintf(stderr, "Not such option, try ./city_hub --start_monitor!\n");
     }
     close(fd[1]);
     read_pipe_input(fd[0]);
+    for (int i = 0; i < child_count; i++)
+        waitpid(pids[i], NULL, 0);
     return 0;
 }
 
@@ -82,7 +87,9 @@ void read_pipe_input(int fd) {
 
     while (!END_PROGRAM) {
         ssize_t n = read(fd, buffer_messages, sizeof(buffer_messages) - 1);
-        buffer_messages[MAX_MONITOR_MESSAGE_SIZE_BUFFER - 1] = '\0';
+        if (n < 0)
+            break;
+        buffer_messages[n] = '\0';
 
         if (strstr(buffer_messages, "end")) {
             END_PROGRAM = 1;

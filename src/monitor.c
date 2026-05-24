@@ -1,6 +1,5 @@
 #include "types.h"
 #include <fcntl.h>
-#include <linux/limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,6 +26,7 @@ int main() {
 
         // strange fail case
         if (read(fd, &monitor_pid_text, sizeof(monitor_pid_text)) == -1) {
+            close(fd);
             return ALREADY_RUNNING;
         }
 
@@ -39,12 +39,11 @@ int main() {
     }
 
     fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+
     if (fd == -1) {
         perror(path);
         return OPEN_FAIL;
     }
-
-    fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, 0644);
 
     pid_t monitor_pid = getpid();
     char process[MAX_PID_DIGITS_LEN];
@@ -86,18 +85,6 @@ int main() {
         return DELETE_FAIL;
     }
 
-    /*
-    process = fork();
-
-    if (process == 0) {
-        execlp("rm", "rm", path, NULL);
-        perror(path);
-        return DELETE_FAIL;
-    } else {
-        waitpid(process, NULL, 0);
-        return 0;
-    }
-    */
     return 0;
 }
 

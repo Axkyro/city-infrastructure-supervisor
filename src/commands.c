@@ -426,18 +426,20 @@ int add(Command *cmd) {
     fd = open(monitor_pid_path, O_RDONLY);
     char monitor_pid_text[MAX_PID_DIGITS_LEN] = "";
     pid_t monitor_pid;
+
     if (fd == -1) {
         fprintf(stderr, "Could not find pid file: [%s]!\n", monitor_pid_path);
         log_operation_message(cmd, new_report.timestamp,
                               "failed to inform monitor");
-        return -1;
+        return 0;
     }
 
     if (read(fd, &monitor_pid_text, sizeof(monitor_pid_text)) == -1) {
         fprintf(stderr, "Could not read pid from: [%s]!\n", monitor_pid_path);
         log_operation_message(cmd, new_report.timestamp,
                               "failed to inform monitor");
-        return -1;
+        close(fd);
+        return 0;
     }
     // trying to transform text to pid
 
@@ -446,14 +448,16 @@ int add(Command *cmd) {
         fprintf(stderr, "Could not read pid from: [%s]!\n", monitor_pid_path);
         log_operation_message(cmd, new_report.timestamp,
                               "failed to inform monitor");
-        return -1;
+        close(fd);
+        return 0;
     }
     // sending the signal
     if (kill(monitor_pid, SIGUSR1) == -1) {
         fprintf(stderr, "Failed to send signal to pid: [%d]!\n", monitor_pid);
         log_operation_message(cmd, new_report.timestamp,
                               "failed to inform monitor");
-        return -1;
+        close(fd);
+        return 0;
     }
 
     close(fd);

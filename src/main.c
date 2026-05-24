@@ -2,7 +2,6 @@
 #include "parser.h"
 #include "types.h"
 #include "utils.h"
-#include <asm-generic/errno-base.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,6 +14,7 @@
 #define DISTRICTS_DIR_PERM 0755
 
 int main(int argc, char **argv) {
+
     Command cmd;
     int status = 0;
 
