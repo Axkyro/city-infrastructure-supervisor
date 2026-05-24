@@ -30,7 +30,7 @@ int main() {
             return ALREADY_RUNNING;
         }
 
-        printf("run: Monitor already running with pid: %s!\n",
+        printf("end: Monitor already running with pid: %s!\n",
                monitor_pid_text);
         fflush(stdout);
 
